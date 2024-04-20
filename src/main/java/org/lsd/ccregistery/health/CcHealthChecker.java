@@ -2,6 +2,7 @@ package org.lsd.ccregistery.health;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.lsd.ccregistery.model.InstanceMeta;
@@ -18,7 +19,7 @@ public class CcHealthChecker implements HealthChecker{
 
     private RegistryService registryService;
 
-    private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledExecutorService executor = new ScheduledThreadPoolExecutor(1);
 
     public CcHealthChecker(RegistryService registryService) {
         this.registryService = registryService;
@@ -27,9 +28,9 @@ public class CcHealthChecker implements HealthChecker{
     @Override
     public void start() {
 
-        log.info(" ====> health checker started...");
+        log.info(" ===>>> health checker started...");
 
-        scheduledExecutorService.scheduleWithFixedDelay(
+        executor.scheduleWithFixedDelay(
                 () -> {
                     long now = System.currentTimeMillis();
 
@@ -39,11 +40,11 @@ public class CcHealthChecker implements HealthChecker{
                         String service = serviceAndInstance.substring(0, index);
                         String url = serviceAndInstance.substring(index + 1);
 
-                        log.info(" ====> health check service and instance {} ", serviceAndInstance);
+                        log.info(" ===>>> health check service and instance {} ", serviceAndInstance);
 
                         if (now - timestamp > timeout) {
                             registryService.unregister(service, InstanceMeta.from(url));
-                            log.info(" ====> health check service and instance {} is timeout", serviceAndInstance);
+                            log.info(" ===>>> health check service and instance {} is timeout", serviceAndInstance);
                             CcRegistryService.TIMESTAMPS.remove(serviceAndInstance);
                         }
                     });
@@ -54,9 +55,9 @@ public class CcHealthChecker implements HealthChecker{
     @Override
     public void stop() {
 
-        scheduledExecutorService.shutdown();
+        executor.shutdown();
 
-        log.info(" ====> health checker stopped...");
+        log.info(" ===>>> health checker stopped...");
     }
 
 }

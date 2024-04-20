@@ -64,3 +64,6 @@ GET http://localhost:8787/version?service=com.test.userservice
 ### 查看时间戳
 GET http://localhost:8787/timestamps
 
+### 获取集群信息
+GET http://localhost:8788/cluster
+

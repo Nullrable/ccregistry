@@ -37,11 +37,11 @@ public class CcRegistryService implements RegistryService {
             instance.setStatus(true);
             REGISTRY.add(service, instance);
 
-            log.info(" ====> register service: {} instance: {}", service, instance.toUrl());
+            log.info(" ===>>> register service: {} instance: {}", service, instance.toUrl());
         } else {
             instance.setStatus(true);
 
-            log.info(" ====> service: {} instance: {} is already registered", service, instance.toUrl());
+            log.info(" ===>>> service: {} instance: {} is already registered", service, instance.toUrl());
         }
         renew(instance, service);
         VERSIONS.put(service, VERSION.incrementAndGet());
@@ -59,7 +59,7 @@ public class CcRegistryService implements RegistryService {
 
         VERSIONS.put(service, VERSION.incrementAndGet());
 
-        log.info(" ====> unregister service: {} instance: {}", service, instance.toUrl());
+        log.info(" ===>>> unregister service: {} instance: {}", service, instance.toUrl());
     }
 
     @Override

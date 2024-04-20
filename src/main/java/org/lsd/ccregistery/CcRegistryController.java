@@ -3,6 +3,8 @@ package org.lsd.ccregistery;
 import jakarta.annotation.Resource;
 import java.util.List;
 import java.util.Map;
+import org.lsd.ccregistery.cluster.Cluster;
+import org.lsd.ccregistery.cluster.Server;
 import org.lsd.ccregistery.model.InstanceMeta;
 import org.lsd.ccregistery.service.CcRegistryService;
 import org.lsd.ccregistery.service.RegistryService;
@@ -22,6 +24,10 @@ public class CcRegistryController {
 
     @Resource
     private RegistryService registryService;
+
+    @Resource
+    private Cluster cluster;
+
 
     @PostMapping("/register")
     public void register(@RequestParam("service") final String service,  @RequestBody final InstanceMeta instance) {
@@ -56,5 +62,15 @@ public class CcRegistryController {
     @GetMapping("/versions")
     public Map<String, Long> versions(@RequestParam("services") final String services) {
         return registryService.versions(services.split(","));
+    }
+
+    @GetMapping("/info")
+    public Server info() {
+        return cluster.MYSELF;
+    }
+
+    @GetMapping("/cluster")
+    public List<Server> cluster() {
+        return cluster.servers;
     }
 }
