@@ -1,0 +1,66 @@
+### 注册服务1
+POST localhost:8787/register?service=com.test.userservice
+Content-Type: application/json
+
+{
+  "scheme": "http",
+  "host": "127.0.0.1",
+  "port": 8081,
+  "context": ""
+}
+
+### 注册服务2
+POST localhost:8787/register?service=com.test.userservice
+Content-Type: application/json
+
+{
+  "scheme": "http",
+  "host": "127.0.0.1",
+  "port": 8082,
+  "context": ""
+}
+
+### 注册服务3
+POST localhost:8787/register?service=com.test.userservice
+Content-Type: application/json
+
+{
+  "scheme": "http",
+  "host": "127.0.0.1",
+  "port": 8083,
+  "context": ""
+
+}
+
+### 注册服务4
+POST localhost:8787/register?service=com.test.userservice
+Content-Type: application/json
+
+{
+  "scheme": "http",
+  "host": "127.0.0.1",
+  "port": 8084,
+  "context": ""
+}
+
+
+### 取消注册服务4
+POST localhost:8787/unregister?service=com.test.userservice
+Content-Type: application/json
+
+{
+  "scheme": "http",
+  "host": "127.0.0.1",
+  "port": 8084
+}
+
+
+### 查询服务
+GET http://localhost:8787/fetchAll?service=com.test.userservice
+
+### 查看版本
+GET http://localhost:8787/version?service=com.test.userservice
+
+### 查看时间戳
+GET http://localhost:8787/timestamps
+
