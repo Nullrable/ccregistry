@@ -1,6 +1,5 @@
 package org.lsd.ccregistery.health;
 
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -19,7 +18,7 @@ public class CcHealthChecker implements HealthChecker{
 
     private RegistryService registryService;
 
-    private ScheduledExecutorService executor = new ScheduledThreadPoolExecutor(1);
+    private ScheduledExecutorService executor;
 
     public CcHealthChecker(RegistryService registryService) {
         this.registryService = registryService;
@@ -27,8 +26,10 @@ public class CcHealthChecker implements HealthChecker{
 
     @Override
     public void start() {
-
-        log.info(" ===>>> health checker started...");
+        if (executor != null) {
+            return;
+        }
+        executor = new ScheduledThreadPoolExecutor(1);
 
         executor.scheduleWithFixedDelay(
                 () -> {
@@ -49,15 +50,16 @@ public class CcHealthChecker implements HealthChecker{
                         }
                     });
                 },
-                10, 10, TimeUnit.SECONDS);
+                30, 30, TimeUnit.SECONDS);
+
+        log.info(" ===>>> health checker started...");
     }
 
     @Override
     public void stop() {
-
-        executor.shutdown();
-
+        if (executor != null) {
+            executor.shutdown();
+        }
         log.info(" ===>>> health checker stopped...");
     }
-
 }

@@ -1,17 +1,24 @@
 package org.lsd.ccregistery.cluster;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.lsd.ccregistery.CcRegistryProperties;
+import org.lsd.ccregistery.health.HealthChecker;
+import org.lsd.ccregistery.model.InstanceMeta;
+import org.lsd.ccregistery.model.Snapshot;
+import org.lsd.ccregistery.service.CcRegistryService;
+import org.lsd.ccregistery.service.RegistryService;
 import org.lsd.ccregistery.util.HttpInvoker;
 import org.lsd.ccregistery.util.InetUtils;
+import org.springframework.util.LinkedMultiValueMap;
 
 /**
  * @author nhsoft.lsd
@@ -19,18 +26,27 @@ import org.lsd.ccregistery.util.InetUtils;
 @Slf4j
 public class Cluster {
 
+    private RegistryService registryService;
+
+    private HealthChecker healthChecker;
+
     private int port;
 
     private CcRegistryProperties ccRegistryProperties;
 
-    public Server MYSELF;
+    private Server MYSELF;
 
     public List<Server> servers;
 
     private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 
-    public Cluster(final CcRegistryProperties ccRegistryProperties, final int port) {
+    public Cluster(final CcRegistryProperties ccRegistryProperties,
+                   final RegistryService registryService,
+                   final HealthChecker healthChecker,
+                   final int port) {
         this.ccRegistryProperties = ccRegistryProperties;
+        this.registryService = registryService;
+        this.healthChecker = healthChecker;
         this.port = port;
     }
 
@@ -68,30 +84,68 @@ public class Cluster {
         this.servers = servers;
 
         executor.scheduleWithFixedDelay(() -> {
-            log.info(" ====>>> cluster schedule invoked");
             try {
                 // 需要先更新服务信息，需要看看当前集群中是否存在主节点
                 updateServer();
 
                 // 再尝试选举主节点
                 electLeader();
+
+                //从 同步 主的数据信息
+                syncFromLeader();
+
             } catch (Exception e) {
                 log.error(e.getMessage(), e);
             }
 
         }, 1, 5, TimeUnit.SECONDS);
 
-        log.info(" ===>>> Cluster started");
+        log.info(" ===>>> cluster started");
+    }
+
+    private void syncFromLeader() {
+        if (MYSELF.isLeader()) {
+            return;
+        }
+        Server leader = servers.stream().filter(Server::isLeader).findAny().orElse(null);
+        if (leader == null) {
+            return;
+        }
+        try {
+            Snapshot snapshot = HttpInvoker.get(leader.getUrl() + "/snapshot", Snapshot.class);
+
+            LinkedMultiValueMap<String, InstanceMeta> map = new LinkedMultiValueMap<>();
+            snapshot.getRegistry().forEach((key, values) -> {
+                values.forEach(v -> {
+                    JSONObject jsonObject = (JSONObject)v;
+                    map.add(key, jsonObject.toJavaObject(InstanceMeta.class));
+                });
+
+            });
+            snapshot.setRegistry(map);
+            //TODO LinkedMultiValueMap value 是 JSONObject，这列需要改造
+            registryService.restore(snapshot);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void electLeader() {
-        List<Server> leaders = servers.stream().filter(Server::isLeader).toList();
+        List<Server> leaders = servers.stream().filter(Server::isStatus).filter(Server::isLeader).toList();
         if (leaders.isEmpty()) {
-            log.info(" ===>>> No leader found");
+            log.info(" ===>>> no leader found");
             elect();
         } else if (leaders.size() > 1) {
-            log.info(" ===>>> Multiple leader found");
+            log.info(" ===>>> multiple leader found");
             elect();
+        } else {
+            log.info(" ===>>> single leader found");
+        }
+
+        if (MYSELF.isLeader()) {
+            healthChecker.start();
+        } else {
+            healthChecker.stop();
         }
     }
 
@@ -119,13 +173,16 @@ public class Cluster {
         } else {
             log.info(" ===>>> elect failed for no leaders: {}", servers);
         }
-
     }
 
     private void updateServer() {
         //定时调用Server服务，更新 status 状态.
-        servers.forEach(server -> {
+        //这里改为并行调用，几个服务就可以同时进行，不然如果串行，servers 多的情况下，最后一个调用会是前几个调用延迟的累加
+        servers.parallelStream().forEach(server -> {
             try {
+                if (server.equals(MYSELF)) {
+                    return;
+                }
                 Server serverInfo = HttpInvoker.get(server.getUrl() + "/info", Server.class);
                 server.setStatus(true);
                 server.setLeader(serverInfo.isLeader());
@@ -136,5 +193,15 @@ public class Cluster {
                 server.setLeader(false);
             }
         });
+    }
+
+    public Server self() {
+        MYSELF.setVersion(CcRegistryService.VERSION.get());
+        return MYSELF;
+    }
+
+    public void destroy(){
+        healthChecker.stop();
+        executor.shutdown();
     }
 }

@@ -2,6 +2,7 @@ package org.lsd.ccregistery;
 
 import org.lsd.ccregistery.cluster.Cluster;
 import org.lsd.ccregistery.health.CcHealthChecker;
+import org.lsd.ccregistery.health.HealthChecker;
 import org.lsd.ccregistery.service.CcRegistryService;
 import org.lsd.ccregistery.service.RegistryService;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,13 +25,15 @@ public class CcRegisterConfig {
         return new CcRegistryService();
     }
 
-    @Bean(initMethod = "start", destroyMethod = "stop")
+    @Bean
     public CcHealthChecker healthChecker(RegistryService registryService) {
         return new CcHealthChecker(registryService);
     }
 
-    @Bean(initMethod = "init")
-    public Cluster cluster(CcRegistryProperties ccRegistryProperties) {
-        return new Cluster(ccRegistryProperties, port);
+    @Bean(initMethod = "init", destroyMethod = "destroy")
+    public Cluster cluster(final CcRegistryProperties ccRegistryProperties,
+                           final RegistryService registryService,
+                           final HealthChecker healthChecker) {
+        return new Cluster(ccRegistryProperties, registryService, healthChecker, port);
     }
 }

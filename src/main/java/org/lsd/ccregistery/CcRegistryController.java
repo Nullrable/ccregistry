@@ -5,7 +5,9 @@ import java.util.List;
 import java.util.Map;
 import org.lsd.ccregistery.cluster.Cluster;
 import org.lsd.ccregistery.cluster.Server;
+import org.lsd.ccregistery.exception.CcRegistryException;
 import org.lsd.ccregistery.model.InstanceMeta;
+import org.lsd.ccregistery.model.Snapshot;
 import org.lsd.ccregistery.service.CcRegistryService;
 import org.lsd.ccregistery.service.RegistryService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,11 +33,17 @@ public class CcRegistryController {
 
     @PostMapping("/register")
     public void register(@RequestParam("service") final String service,  @RequestBody final InstanceMeta instance) {
+
+        checkLeader();
+
         registryService.register(service, instance);
     }
 
     @PostMapping("/unregister")
     public void unregister(@RequestParam("service") final String service,  @RequestBody final InstanceMeta instance) {
+
+        checkLeader();
+
         registryService.unregister(service, instance);
     }
 
@@ -45,7 +53,10 @@ public class CcRegistryController {
     }
 
     @GetMapping("/heartbeat")
-    public long heartbeat(@RequestParam("services") final String services,  @RequestBody final InstanceMeta instance) {
+    public Long heartbeat(@RequestParam("services") final String services,  @RequestBody final InstanceMeta instance) {
+
+        checkLeader();
+
         return registryService.renew(instance, services.split(","));
     }
 
@@ -55,7 +66,7 @@ public class CcRegistryController {
     }
 
     @GetMapping("/version")
-    public long version(@RequestParam("service") final String service) {
+    public Long version(@RequestParam("service") final String service) {
         return registryService.version(service);
     }
 
@@ -66,11 +77,22 @@ public class CcRegistryController {
 
     @GetMapping("/info")
     public Server info() {
-        return cluster.MYSELF;
+        return cluster.self();
+    }
+
+    @GetMapping("/snapshot")
+    public Snapshot snapshot() {
+        return registryService.snapshot();
     }
 
     @GetMapping("/cluster")
     public List<Server> cluster() {
         return cluster.servers;
+    }
+
+    private void checkLeader() {
+        if (!cluster.self().isLeader()) {
+            throw new CcRegistryException("current instance is not leader");
+        }
     }
 }

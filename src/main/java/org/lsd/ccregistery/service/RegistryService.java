@@ -3,6 +3,7 @@ package org.lsd.ccregistery.service;
 import java.util.List;
 import java.util.Map;
 import org.lsd.ccregistery.model.InstanceMeta;
+import org.lsd.ccregistery.model.Snapshot;
 
 /**
  * @author nhsoft.lsd
@@ -36,13 +37,17 @@ public interface RegistryService {
     List<InstanceMeta> fetchAll(String service);
 
     //高级功能
-    long renew(InstanceMeta instance, String... service);
+    Long renew(InstanceMeta instance, String... service);
 
-    long version(String service);
+    Long version(String service);
 
     Map<String, Long> versions(String... versions);
 
     void subscribe(String service);
 
     void unsubscribe(String service);
+
+    Snapshot snapshot();
+
+    void restore(Snapshot snapshot);
 }
