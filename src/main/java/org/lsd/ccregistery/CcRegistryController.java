@@ -91,7 +91,7 @@ public class CcRegistryController {
     }
 
     private void checkLeader() {
-        if (!cluster.self().isLeader()) {
+        if (!cluster.MYSELF.isLeader()) {
             throw new CcRegistryException("current instance is not leader");
         }
     }

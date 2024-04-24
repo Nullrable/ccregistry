@@ -113,9 +113,6 @@ public class CcRegistryService implements RegistryService {
 
     @Override
     public synchronized void restore(final Snapshot snapshot) {
-
-        log.info(" ===>>> current data : {}", this);
-
         REGISTRY.clear();
         if (snapshot.getRegistry() != null && !snapshot.getRegistry().isEmpty()) {
             REGISTRY.addAll((MultiValueMap<String, InstanceMeta>) snapshot.getRegistry());
@@ -134,7 +131,5 @@ public class CcRegistryService implements RegistryService {
         if (snapshot.getVersion() != null) {
             VERSION.set(snapshot.getVersion());
         }
-
-        log.info(" ===>>> restore from snapshot: {}", snapshot);
     }
 }

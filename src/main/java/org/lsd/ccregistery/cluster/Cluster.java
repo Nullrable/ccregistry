@@ -34,7 +34,7 @@ public class Cluster {
 
     private CcRegistryProperties ccRegistryProperties;
 
-    private Server MYSELF;
+    public Server MYSELF;
 
     public List<Server> servers;
 
@@ -107,7 +107,7 @@ public class Cluster {
         if (MYSELF.isLeader()) {
             return;
         }
-        Server leader = servers.stream().filter(Server::isLeader).findAny().orElse(null);
+        Server leader = leader();
         if (leader == null) {
             return;
         }
@@ -124,7 +124,12 @@ public class Cluster {
             });
             snapshot.setRegistry(map);
             //TODO LinkedMultiValueMap value 是 JSONObject，这列需要改造
-            registryService.restore(snapshot);
+
+            if (MYSELF.getVersion() < snapshot.getVersion()) {
+                log.debug(" ===>>> sync snapshot from leader: {}", leader);
+                registryService.restore(snapshot);
+                log.debug(" ===>>> sync and restore snapshot: {}", snapshot);
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -200,8 +205,14 @@ public class Cluster {
         return MYSELF;
     }
 
+    public Server leader() {
+        return servers.stream().filter(Server::isLeader).findFirst().orElse(null);
+    }
+
     public void destroy(){
         healthChecker.stop();
-        executor.shutdown();
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdown();
+        }
     }
 }

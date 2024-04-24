@@ -26,7 +26,7 @@ public class CcHealthChecker implements HealthChecker{
 
     @Override
     public void start() {
-        if (executor != null) {
+        if (executor != null && !executor.isShutdown()) {
             return;
         }
         executor = new ScheduledThreadPoolExecutor(1);
@@ -57,7 +57,7 @@ public class CcHealthChecker implements HealthChecker{
 
     @Override
     public void stop() {
-        if (executor != null) {
+        if (executor != null && !executor.isShutdown()) {
             executor.shutdown();
         }
         log.info(" ===>>> health checker stopped...");
