@@ -15,6 +15,7 @@ import org.lsd.ccregistery.service.RegistryService;
 public class CcHealthChecker implements HealthChecker{
 
     private long timeout = 10_000;
+    private long interval = 1000;
 
     private RegistryService registryService;
 
@@ -50,7 +51,7 @@ public class CcHealthChecker implements HealthChecker{
                         }
                     });
                 },
-                30, 30, TimeUnit.SECONDS);
+                0, interval, TimeUnit.MILLISECONDS);
 
         log.info(" ===>>> health checker started...");
     }

@@ -1,5 +1,5 @@
 ### 注册服务
-POST localhost:8787/register?service=com.test.userservice
+POST localhost:8787/register?service=app1_public_dev_cc.rpc.demo.api.UserService
 Content-Type: application/json
 
 {
@@ -10,7 +10,7 @@ Content-Type: application/json
 }
 
 ### 取消注册服务
-POST localhost:8787/unregister?service=com.test.userservice
+POST localhost:8787/unregister?service=app1_public_dev_cc.rpc.demo.api.UserService
 Content-Type: application/json
 
 {
@@ -21,10 +21,10 @@ Content-Type: application/json
 
 
 ### 查询服务
-GET http://localhost:8788/fetchAll?service=app1_public_dev_cc.rpc.demo.api.UserService
+GET http://localhost:8787/fetchAll?service=app1_public_dev_cc.rpc.demo.api.UserService
 
 ### 查看版本
-GET http://localhost:8788/version?service=com.test.userservice
+GET http://localhost:8787/version?service=app1_public_dev_cc.rpc.demo.api.UserService
 
 ### 查看时间戳
 GET http://localhost:8787/timestamps
@@ -34,5 +34,10 @@ GET http://localhost:8787/cluster
 
 ### 查看快照
 GET http://localhost:8787/snapshot
+
+### 订阅服务变更
+GET http://localhost:8787/subscribe?service=app1_public_dev_cc.rpc.demo.api.UserService
+
+
 
 
