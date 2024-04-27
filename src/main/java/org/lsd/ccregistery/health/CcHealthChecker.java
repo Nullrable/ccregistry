@@ -14,7 +14,7 @@ import org.lsd.ccregistery.service.RegistryService;
 @Slf4j
 public class CcHealthChecker implements HealthChecker{
 
-    private long timeout = 10_000;
+    private long timeout = 60_000;
     private long interval = 1000;
 
     private RegistryService registryService;
