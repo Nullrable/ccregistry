@@ -21,7 +21,7 @@ Content-Type: application/json
 
 
 ### 查询服务
-GET http://localhost:8788/fetchAll?service=com.test.userservice
+GET http://localhost:8788/fetchAll?service=app1_public_dev_cc.rpc.demo.api.UserService
 
 ### 查看版本
 GET http://localhost:8788/version?service=com.test.userservice

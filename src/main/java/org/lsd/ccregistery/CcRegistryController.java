@@ -10,6 +10,7 @@ import org.lsd.ccregistery.model.InstanceMeta;
 import org.lsd.ccregistery.model.Snapshot;
 import org.lsd.ccregistery.service.CcRegistryService;
 import org.lsd.ccregistery.service.RegistryService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -52,7 +53,7 @@ public class CcRegistryController {
        return registryService.fetchAll(service);
     }
 
-    @GetMapping("/heartbeat")
+    @PostMapping("/heartbeat")
     public Long heartbeat(@RequestParam("services") final String services,  @RequestBody final InstanceMeta instance) {
 
         checkLeader();
@@ -88,6 +89,28 @@ public class CcRegistryController {
     @GetMapping("/cluster")
     public List<Server> cluster() {
         return cluster.servers;
+    }
+
+    @GetMapping("/subscribe")
+    public ResponseEntity subscribe(@RequestParam("service") final String service) throws InterruptedException {
+
+        Long currentVersion = registryService.version(service);
+
+        Long latestVersion = currentVersion;
+
+        while (currentVersion.equals(latestVersion)) {
+            latestVersion = registryService.version(service);
+            try {
+                Thread.sleep(1000); // 1秒检查一次
+            }catch (Exception e) {
+            }
+        }
+        return ResponseEntity.ok(registryService.fetchAll(service));
+    }
+
+    @GetMapping("/unsubscribe")
+    public void unsubscribe(@RequestParam("service") final String service) {
+
     }
 
     private void checkLeader() {
