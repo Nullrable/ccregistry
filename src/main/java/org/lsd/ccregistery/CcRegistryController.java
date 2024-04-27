@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.lsd.ccregistery.cluster.Cluster;
 import org.lsd.ccregistery.cluster.Server;
 import org.lsd.ccregistery.exception.CcRegistryException;
+import org.lsd.ccregistery.http.DeferredResultWrapper;
 import org.lsd.ccregistery.model.InstanceMeta;
 import org.lsd.ccregistery.model.Snapshot;
 import org.lsd.ccregistery.service.CcRegistryService;
@@ -102,22 +103,46 @@ public class CcRegistryController {
 
     private final ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(1);
     private final Map<String, Long> VERSIONS = new HashMap<>();
-    private final Map<String, Future> scheduledFutures = new HashMap<>();
-    private final long LONG_POLLING_TIMEOUT = 60_000L;
+    private final Map<String, DeferredResultWrapper<String>> DEFERRED_RESULTS = new HashMap<>();
+
 
     @GetMapping("/subscribe")
     public DeferredResult<String> subscribe(@RequestParam("service") final String service) {
-        DeferredResult<String> deferredResult = new DeferredResult<>(LONG_POLLING_TIMEOUT);
+
+        DeferredResultWrapper<String> resultWrapper = DEFERRED_RESULTS.get(service);
+        if (resultWrapper != null) {
+            return resultWrapper.getDeferredResult();
+        }
+
+        resultWrapper = new DeferredResultWrapper<>();
+
+        resultWrapper.onCompletion(() -> {
+            DEFERRED_RESULTS.remove(service);
+            log.info("deferred result is completed, service is removed {}", service);
+        });
+
+        resultWrapper.onTimeout(() -> {
+            DEFERRED_RESULTS.remove(service);
+            log.info("deferred result is timeout, service is removed {}", service);
+        });
+
         // 返回一个 DeferredResult 对象
-        Future future = executorService.submit(new LongPullingTask(service, deferredResult));
-        scheduledFutures.put(service, future);
-        return deferredResult;
+        Future<?> future = executorService.submit(new LongPullingTask(service, resultWrapper));
+        resultWrapper.setFuture(future);
+
+        DEFERRED_RESULTS.put(service, resultWrapper);
+
+        return resultWrapper.getDeferredResult();
     }
 
     @GetMapping("/unsubscribe")
     @ResponseStatus(HttpStatus.OK)
     public void unsubscribe(@RequestParam("service") final String service) {
-        Future future = scheduledFutures.get(service);
+        DeferredResultWrapper<?> deferredResultWrapper = DEFERRED_RESULTS.get(service);
+        if (deferredResultWrapper == null) {
+            return;
+        }
+        Future<?> future = deferredResultWrapper.getFuture();
         if (future != null && !future.isCancelled()) {
             future.cancel(true);
         }
@@ -125,11 +150,11 @@ public class CcRegistryController {
 
     class LongPullingTask implements Runnable {
         private String service;
-        private DeferredResult<String> deferredResult;
+        private DeferredResultWrapper<String> resultWrapper;
 
-        public LongPullingTask(final String service, final DeferredResult<String> deferredResult) {
+        public LongPullingTask(final String service, final DeferredResultWrapper<String> resultWrapper) {
             this.service = service;
-            this.deferredResult = deferredResult;
+            this.resultWrapper = resultWrapper;
         }
 
         @Override
@@ -145,11 +170,11 @@ public class CcRegistryController {
                     Thread.sleep(1000);
                 }
                 List<InstanceMeta> instanceMetas = registryService.fetchAll(service);
-                deferredResult.setResult(JSON.toJSONString(instanceMetas)); // 设置结果
+                resultWrapper.setResult(JSON.toJSONString(instanceMetas)); // 设置结果
                 log.info(" ====>>>> instance changed:{}", instanceMetas);
 
             } catch (Exception e) {
-                deferredResult.setErrorResult(e.getMessage()); // 设置错误结果
+                resultWrapper.setErrorResult(e.getMessage()); // 设置错误结果
             }
         }
     }
